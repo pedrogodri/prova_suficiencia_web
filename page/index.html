@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gerenciador de Fotos</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script defer src="script.js"></script>
+    </head>
+    <body class="container mt-4">
+        <nav class="nav nav-pills mb-4">
+            <a class="nav-link active" href="#" onclick="mostrarSecoes('cadastrar')">Inserir</a>
+            <a class="nav-link" href="#" onclick="mostrarSecoes('listar')">Listar</a>
+            <a class="nav-link" href="#" onclick="mostrarSecoes('delete')">Excluir</a>
+        </nav>
+        
+        <div id="cadastrar" class="card p-4">
+            <h3>Inserir Nova Foto</h3>
+            <form id="formFotos">
+                <div class="mb-3">
+                    <label class="form-label">Album ID</label>
+                    <input type="number" class="form-control" id="albumId" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Título</label>
+                    <input type="text" class="form-control" id="title" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">URL da Imagem</label>
+                    <input type="url" class="form-control" id="url" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">URL da Miniatura</label>
+                    <input type="url" class="form-control" id="thumbnailUrl" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Adicionar</button>
+            </form>
+        </div>
+        
+        <div id="listar" class="card p-4 d-none">
+            <h3>Lista de Fotos</h3>
+            <input type="text" id="searchInput" class="form-control mb-3" placeholder="Pesquisar por título ou ID..." oninput="pesquisarFotos()">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Album ID</th>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Imagem</th>
+                        <th>Miniatura</th>
+                    </tr>
+                </thead>
+                <tbody id="photoTable"></tbody>
+            </table>
+            <nav>
+                <ul class="pagination">
+                    <li class="page-item"><a class="page-link" href="#" onclick="trocarPagina(-1)">Anterior</a></li>
+                    <li class="page-item"><span class="page-link" id="numeroPagina">1</span></li>
+                    <li class="page-item"><a class="page-link" href="#" onclick="trocarPagina(1)">Próximo</a></li>
+                </ul>
+            </nav>
+            <button class="btn btn-secondary" onclick="getFotos()">Carregar Fotos</button>
+        </div>
+        
+        <div id="delete" class="card p-4 d-none">
+            <h3>Excluir Foto</h3>
+            <input type="number" id="excluirId" class="form-control mb-3" placeholder="Digite o ID">
+            <button class="btn btn-danger" onclick="excluirFoto()">Excluir</button>
+        </div>
+        
+        <script>
+            let paginaAtual = 1;
+            const itemsPorPagina = 100;
+
+            document.getElementById('formFotos').addEventListener('submit', function(event) {
+                event.preventDefault();
+                let albumId = parseInt(document.getElementById('albumId').value);
+                let title = document.getElementById('title').value;
+                let url = document.getElementById('url').value;
+                let thumbnailUrl = document.getElementById('thumbnailUrl').value;
+                let photos = JSON.parse(localStorage.getItem('photos')) || [];
+                
+                let newId = photos.length > 0 ? Math.max(...photos.map(p => p.id)) + 1 : 1;
+                let newPhoto = { albumId, id: newId, title, url, thumbnailUrl };
+                
+                photos.push(newPhoto);
+                localStorage.setItem('photos', JSON.stringify(photos));
+                alert('Foto adicionada com sucesso!');
+                document.getElementById('formFotos').reset();
+            });
+
+            function getFotos() {
+                fetch('https://jsonplaceholder.typicode.com/photos')
+                .then(response => response.json())
+                .then(data => {
+                    let existingPhotos = JSON.parse(localStorage.getItem('photos')) || [];
+                    let uniquePhotos = data.filter(photo => !existingPhotos.some(p => p.id === photo.id));
+                    
+                    if (uniquePhotos.length > 0) {
+                        localStorage.setItem('photos', JSON.stringify([...existingPhotos, ...uniquePhotos]));
+                        alert(`${uniquePhotos.length} novas fotos foram adicionadas!`);
+                    } else {
+                        alert('Nenhuma nova foto foi encontrada.');
+                    }
+                    carregarFotos();
+                })
+                .catch(error => console.error('Erro ao buscar fotos:', error));
+            }
+
+            function carregarFotos() {
+                let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+                fotos.reverse();
+                atualizarTabela(fotos);
+            }
+
+            function atualizarTabela(fotos) {
+                let corpoPagina = document.getElementById('photoTable');
+                corpoPagina.innerHTML = '';
+
+                let inicio = (paginaAtual - 1) * itemsPorPagina;
+                let fim = inicio + itemsPorPagina;
+                let fotosPaginadas = fotos.slice(inicio, fim);
+
+                fotosPaginadas.forEach(foto => {
+                    let row = `<tr>
+                        <td>${foto.albumId}</td>
+                        <td>${foto.id}</td>
+                        <td>${foto.title}</td>
+                        <td><img src="${foto.url}" width="50"></td>
+                        <td><img src="${foto.thumbnailUrl}" width="50"></td>
+                    </tr>`;
+                    corpoPagina.innerHTML += row;
+                });
+
+                document.getElementById('numeroPagina').innerText = paginaAtual;
+            }
+
+            function trocarPagina(direcao) {
+                let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+                let paginasTotais = Math.ceil(fotos.length / itemsPorPagina);
+                if (paginaAtual + direcao > 0 && paginaAtual + direcao <= paginasTotais) {
+                    paginaAtual += direcao;
+                    carregarFotos();
+                }
+            }
+
+            function excluirFoto() {
+                let id = parseInt(document.getElementById('excluirId').value);
+                let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+                let fotosFiltrada = fotos.filter(foto => foto.id !== id);
+                localStorage.setItem('photos', JSON.stringify(fotosFiltrada));
+                alert('Foto excluída!');
+                document.getElementById('excluirId').value = '';
+                carregarFotos();
+            }
+
+            function pesquisarFotos() {
+                let termo = document.getElementById('searchInput').value.toLowerCase();
+                let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+                
+                let fotosFiltradas = fotos.filter(foto => 
+                    foto.id.toString().includes(termo) || 
+                    foto.title.toLowerCase().includes(termo)
+                );
+
+                atualizarTabela(fotosFiltradas);
+            }
+
+            function mostrarSecoes(section) {
+                document.getElementById('cadastrar').classList.add('d-none');
+                document.getElementById('listar').classList.add('d-none');
+                document.getElementById('delete').classList.add('d-none');
+                document.getElementById(section).classList.remove('d-none');
+                if (section === 'listar') carregarFotos();
+            }
+        </script>
+    </body>
+</html>
