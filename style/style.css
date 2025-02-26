@@ -1,0 +1,46 @@
+* {
+    font-family: 'Roboto', sans-serif;
+}
+.cabecalho {
+    background-color: transparent;
+    border-radius: 0.5rem;
+    border: 1px solid #797979;
+}
+
+.nav-link:hover {
+    background-color: #67b0ff;
+    color: white !important;
+} 
+
+.active-section {
+    background-color: #007bff;
+    color: white !important;
+}
+
+.btn:hover {
+    transition: 0.3s;
+}
+
+.btn-success:hover {
+    background-color: white !important;
+    color: #198754 !important;
+    border: 1px solid #198754 !important;
+}
+
+.btn-secondary:hover {
+    background-color: white !important;
+    color: #6c757d !important;
+    border: 1px solid #6c757d !important;
+}
+
+.btn-danger:hover {
+    background-color: white !important;
+    color: #dc3545 !important;
+    border: 1px solid #dc3545 !important;
+}
+
+.btn-warning:hover {
+    background-color: white !important;
+    color: #ffc107 !important;
+    border: 1px solid #ffc107;
+}
