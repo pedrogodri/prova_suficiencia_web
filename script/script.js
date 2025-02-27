@@ -1,47 +1,6 @@
 let paginaAtual = 1;
 const itemsPorPagina = 10;
 
-document.getElementById('formFotos').addEventListener('submit', function(event) {
-    event.preventDefault();
-    let albumId = parseInt(document.getElementById('albumId').value);
-    let title = document.getElementById('title').value;
-    let url = document.getElementById('url').value;
-    let thumbnailUrl = document.getElementById('thumbnailUrl').value;
-    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
-
-    let novoId = fotos.length > 0 ? Math.max(...fotos.map(f => f.id)) + 1 : 1;
-    let novaFoto = { albumId, id: novoId, title, url, thumbnailUrl };
-
-    fotos.push(novaFoto);
-    localStorage.setItem('photos', JSON.stringify(fotos));
-    alert('Foto adicionada com sucesso!');
-    document.getElementById('formFotos').reset();
-});
-
-function getFotos() {
-    fetch('https://jsonplaceholder.typicode.com/photos')
-        .then(response => response.json())
-        .then(data => {
-            let fotos = JSON.parse(localStorage.getItem('photos')) || [];
-            let novasFotos = data.filter(foto => !fotos.some(f => f.id === fotos.id));
-
-            if (novasFotos.length) {
-                localStorage.setItem('photos', JSON.stringify([...fotos, ...novasFotos]));
-                alert(`${novasFotos.length} novas fotos adicionadas!`);
-            } else {
-                alert('Nenhuma nova foto encontrada.');
-            }
-            carregarFotos();
-        })
-        .catch(console.error);
-}
-
-function carregarFotos() {
-    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
-    fotos.reverse();
-    atualizarTabela(fotos);
-}
-
 function atualizarTabela(fotos) {
     let corpoPagina = document.getElementById('photoTable');
     corpoPagina.innerHTML = '';
@@ -64,36 +23,23 @@ function atualizarTabela(fotos) {
     document.getElementById('numeroPagina').innerText = paginaAtual;
 }
 
-function trocarPagina(direcao) {
-    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
-    let paginasTotais = Math.ceil(fotos.length / itemsPorPagina);
-    if (paginaAtual + direcao > 0 && paginaAtual + direcao <= paginasTotais) {
-        paginaAtual += direcao;
-        carregarFotos();
-    }
-}
-
-function excluirFoto() {
-    let id = parseInt(document.getElementById('excluirId').value);
-    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
-    let fotosFiltrada = fotos.filter(foto => foto.id !== id);
-    localStorage.setItem('photos', JSON.stringify(fotosFiltrada));
-    alert('Foto excluída!');
-    document.getElementById('excluirId').value = '';
-    carregarFotos();
-}
-
-function pesquisarFotos() {
-    let termo = document.getElementById('campoPesquisa').value.toLowerCase();
+document.getElementById('formFotos').addEventListener('submit', function(event) {
+    event.preventDefault();
+    let albumId = parseInt(document.getElementById('albumId').value);
+    let title = document.getElementById('title').value;
+    let url = document.getElementById('url').value;
+    let thumbnailUrl = document.getElementById('thumbnailUrl').value;
     let fotos = JSON.parse(localStorage.getItem('photos')) || [];
 
-    let fotosFiltradas = fotos.filter(foto => 
-        foto.id.toString().includes(termo) || 
-        foto.title.toLowerCase().includes(termo)
-    );
+    let novoId = fotos.length > 0 ? Math.max(...fotos.map(f => f.id)) + 1 : 1;
+    let novaFoto = { albumId, id: novoId, title, url, thumbnailUrl };
 
-    atualizarTabela(fotosFiltradas);
-}
+    fotos.push(novaFoto);
+    localStorage.setItem('photos', JSON.stringify(fotos));
+    adicionarFotoAPI(novaFoto);
+    alert('Foto adicionada com sucesso!');
+    document.getElementById('formFotos').reset();
+});
 
 function editarFoto() {
     let id = parseInt(document.getElementById('editarId').value);
@@ -112,7 +58,7 @@ function editarFoto() {
     if (fotoIndex > 0) {
         fotos[fotoIndex] = { id, albumId: fotos[fotoIndex].albumId, title, url, thumbnailUrl };
         localStorage.setItem('photos', JSON.stringify(fotos));
-
+        editarFotoAPI(fotos[fotoIndex]);
         alert('Foto editada com sucesso!');
 
         document.getElementById('editarId').value = '';
@@ -125,7 +71,6 @@ function editarFoto() {
         alert('Foto não encontrada!');
     }
 }
-
 
 document.getElementById('editarId').addEventListener('input', function(event) {
     let id = parseInt(event.target.value);
@@ -144,6 +89,38 @@ document.getElementById('editarId').addEventListener('input', function(event) {
         }
     }
 });
+
+function excluirFoto() {
+    let id = parseInt(document.getElementById('excluirId').value);
+    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+    let fotosFiltrada = fotos.filter(foto => foto.id !== id);
+    localStorage.setItem('photos', JSON.stringify(fotosFiltrada));
+    excluirFotoAPI(id);
+    alert('Foto excluída!');
+    document.getElementById('excluirId').value = '';
+    carregarFotos();
+}
+
+function trocarPagina(direcao) {
+    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+    let paginasTotais = Math.ceil(fotos.length / itemsPorPagina);
+    if (paginaAtual + direcao > 0 && paginaAtual + direcao <= paginasTotais) {
+        paginaAtual += direcao;
+        carregarFotos();
+    }
+}
+
+function pesquisarFotos() {
+    let termo = document.getElementById('campoPesquisa').value.toLowerCase();
+    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+
+    let fotosFiltradas = fotos.filter(foto => 
+        foto.id.toString().includes(termo) || 
+        foto.title.toLowerCase().includes(termo)
+    );
+
+    atualizarTabela(fotosFiltradas);
+}
 
 function mostrarSecoes(section) {
     document.getElementById('cadastrar').classList.add('d-none');
@@ -164,4 +141,10 @@ function mostrarSecoes(section) {
     }
 
     if (section === 'listar') carregarFotos();
+}
+
+function carregarFotos() {
+    let fotos = JSON.parse(localStorage.getItem('photos')) || [];
+    fotos.reverse();
+    atualizarTabela(fotos);
 }
